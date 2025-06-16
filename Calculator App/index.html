@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Calculator</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <table border="1">
+      <tr>
+        <td colspan="4">
+          <input type="text" id="inputBox" value="0" />
+        </td>
+      </tr>
+      <tr>
+        <td class="digit" onclick="digitBtnPressed(7)">7</td>
+        <td class="digit" onclick="digitBtnPressed(8)">8</td>
+        <td class="digit" onclick="digitBtnPressed(9)">9</td>
+        <td class="operator" onclick="operatorBtnPressed('x')">x</td>
+      </tr>
+      <tr>
+        <td class="digit" onclick="digitBtnPressed(4)">4</td>
+        <td class="digit" onclick="digitBtnPressed(5)">5</td>
+        <td class="digit" onclick="digitBtnPressed(6)">6</td>
+        <td class="operator" onclick="operatorBtnPressed('-')">-</td>
+      </tr>
+      <tr>
+        <td class="digit" onclick="digitBtnPressed(1)">1</td>
+        <td class="digit" onclick="digitBtnPressed(2)">2</td>
+        <td class="digit" onclick="digitBtnPressed(3)">3</td>
+        <td class="operator" onclick="operatorBtnPressed('+')">+</td>
+      </tr>
+      <tr>
+        <td class="digit" onclick="digitBtnPressed(0)" colspan="2">0</td>
+        <td id="ac">AC</td>
+        <td class="operator" onclick="operatorBtnPressed('/')">/</td>
+      </tr>
+      <tr>
+        <td class="operator" id="result" colspan="4">=</td>
+      </tr>
+    </table>
+    <script>
+      // value for operation
+      var value1 = 0;
+      var currentOperator;
+
+      // cancel action
+      document.getElementById("ac").addEventListener("click", function () {
+        value1 = 0;
+        currentOperator = null;
+        document.getElementById("inputBox").value = "0";
+      });
+
+      // digit button pressed
+      // this function is called when a digit button is pressed
+      function digitBtnPressed(value) {
+        const inputBox = document.getElementById("inputBox");
+        // if the input box is empty or has a value of 0, set it to the pressed value
+        // otherwise, append the pressed value to the existing value
+        if (inputBox.value === "0") {
+          inputBox.value = value;
+        } else {
+          inputBox.value += value;
+        }
+      }
+
+      // calculate the result based on the current operator
+      function operatorBtnPressed(operator) {
+        if (currentOperator) {
+          // if an operator is already selected, calculate the result
+          calculate();
+          return;
+        }
+        currentOperator = operator;
+        value1 = parseInt(document.getElementById("inputBox").value);
+        document.getElementById("inputBox").value = "0";
+      }
+
+      // calculate the result based on the current operator
+      function calculate() {
+        const inputBox = document.getElementById("inputBox");
+        const value2 = parseInt(inputBox.value);
+        let result;
+
+        switch (currentOperator) {
+          case "+":
+            result = value1 + value2;
+            break;
+          case "-":
+            result = value1 - value2;
+            break;
+          case "x":
+            result = value1 * value2;
+            break;
+          case "/":
+            result = value1 / value2;
+            break;
+          default:
+            result = "Error";
+        }
+        value1 = result; // update value1 for next operation
+        // inputBox.value = result;
+        currentOperator = null; // reset operator after calculation
+      }
+
+      // handle the equal button click
+      document
+        .getElementById("result")
+        .addEventListener("click", function result() {
+          const inputBox = document.getElementById("inputBox");
+          if (currentOperator) {
+            calculate();
+            inputBox.value = value1; // display the result in the input box
+          }
+          //    else {
+          //     inputBox.value = "0"; // reset if no operator is selected
+          //   }
+        });
+    </script>
+  </body>
+</html>

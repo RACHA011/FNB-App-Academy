@@ -1,0 +1,37 @@
+table {
+    color: #fff;
+    text-align: center;
+    border-collapse: collapse;
+    font: normal 3em Arial, Helvetica, sans-serif;
+}
+
+tr {
+    height: 16.02vh;
+    background-color: #4e494d;
+}
+
+td {
+    border: 1px solid #4e494d;
+    width: 25vw;
+}
+
+#inputBox {
+    background: #4e494d;
+    text-align: right;
+    width: 99%;
+    font-size: 2em;
+    color: #fff;
+    border: 0px;
+}
+
+.digit {
+    background-color: #807e80;
+}
+
+.operator {
+    background-color: #ff9e06;
+}
+
+#ac {
+    background-color: #656165;
+}
