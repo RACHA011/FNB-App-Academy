@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Contact - Contact Book</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <button class="btn btn-secondary back-btn" onclick="home()">
+                <i class="fas fa-arrow-left"></i> Back
+            </button>
+            <h1>Add New Contact</h1>
+        </header>
+
+        <main class="main-content">
+            <div class="form-container">
+                <div class="avatar-section">
+                    <div class="avatar-preview">
+                        <img id="avatarPreview" src="https://via.placeholder.com/120x120/4f46e5/white?text=+" alt="Avatar Preview">
+                        <div class="avatar-overlay">
+                            <i class="fas fa-camera"></i>
+                        </div>
+                    </div>
+                    <input type="file" id="avatarInput" accept="image/*" style="display: none;">
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('avatarInput').click()">
+                        <i class="fas fa-upload"></i> Choose Photo
+                    </button>
+                </div>
+
+                <form id="addForm" class="contact-form">
+                    <div class="form-group">
+                        <label for="firstname">
+                            <i class="fas fa-user"></i> First Name *
+                        </label>
+                        <input type="text" name="firstname" id="firstname" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="lastname">
+                            <i class="fas fa-user"></i> Last Name *
+                        </label>
+                        <input type="text" name="lastname" id="lastname" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="mobile">
+                            <i class="fas fa-phone"></i> Mobile Number
+                        </label>
+                        <input type="tel" name="mobile" id="mobile">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">
+                            <i class="fas fa-envelope"></i> Email Address
+                        </label>
+                        <input type="email" name="email" id="email">
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="home()">
+                            Cancel
+                        </button>
+                        <button type="submit" id="submitForm" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Contact
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <!-- Loading overlay -->
+    <div id="loadingOverlay" style="display: none;" class="loading-overlay">
+        <div class="loading-content">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Saving contact...</p>
+        </div>
+    </div>
+
+    <!-- Modal for messages -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        // Avatar preview functionality
+        document.getElementById('avatarInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('avatarPreview').src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Form validation
+        function validateForm() {
+            const firstname = document.getElementById('firstname').value.trim();
+            const lastname = document.getElementById('lastname').value.trim();
+            
+            if (!firstname || !lastname) {
+                showMessage('Please fill in both first name and last name.', 'error');
+                return false;
+            }
+
+            const email = document.getElementById('email').value.trim();
+            if (email && !isValidEmail(email)) {
+                showMessage('Please enter a valid email address.', 'error');
+                return false;
+            }
+
+            return true;
+        }
+
+        function isValidEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+
+        // Form submission
+        document.getElementById("submitForm").addEventListener("click", function (e) {
+            e.preventDefault();
+            
+            if (!validateForm()) {
+                return;
+            }
+
+            showLoading(true);
+            
+            // Simulate API call
+            // setTimeout(() => {
+            //     showLoading(false);
+            //     showMessage('Contact added successfully!', 'success', () => {
+            //         home();
+            //     });
+            // }, 1500);
+
+            // Uncomment for actual API call
+            
+            const form = new FormData(document.querySelector("#addForm"));
+            const avatarFile = document.getElementById('avatarInput').files[0];
+            if (avatarFile) {
+                form.append("avatar", avatarFile);
+            }
+            form.append("apiKey", apiKey);
+
+            fetch(rootPath + "controller/insert-contact/", {
+                method: "POST",
+                headers: { Accept: "application/json, *.*" },
+                body: form,
+            })
+            .then(function (response) {
+                return response.text();
+            })
+            .then(function (data) {
+                showLoading(false);
+                if (data == "1") {
+                    showMessage("Contact added successfully!", 'success', () => {
+                        home();
+                    });
+                } else {
+                    showMessage(data, 'error');
+                }
+            })
+            .catch(function(error) {
+                showLoading(false);
+                showMessage("An error occurred while saving the contact.", 'error');
+            });
+        });
+
+        // Modal functionality
+        const modal = document.getElementById("modal");
+        const closeModal = document.getElementsByClassName("close")[0];
+
+        closeModal.onclick = function() {
+            modal.style.display = "none";
+        }
+
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+
+        function showLoading(show) {
+            const overlay = document.getElementById("loadingOverlay");
+            overlay.style.display = show ? "flex" : "none";
+        }
+
+        function showMessage(message, type, callback) {
+            const modalBody = document.getElementById("modalBody");
+            const icon = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle';
+            const color = type === 'success' ? '#10b981' : '#ef4444';
+            
+            modalBody.innerHTML = `
+                <div class="message-content" style="text-align: center;">
+                    <i class="${icon}" style="font-size: 3rem; color: ${color}; margin-bottom: 1rem;"></i>
+                    <h3>${type === 'success' ? 'Success' : 'Error'}</h3>
+                    <p>${message}</p>
+                    <button class="btn btn-primary" onclick="modal.style.display='none'; ${callback ? callback.toString() + '()' : ''}">
+                        OK
+                    </button>
+                </div>
+            `;
+            modal.style.display = "block";
+        }
+
+        function home() {
+            window.location.href = "index.html";
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Edit Contact - Contact Book</title>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body onload="getContact()">
+    <div class="container">
+      <header class="header">
+        <button class="btn btn-secondary back-btn" onclick="home()">
+          <i class="fas fa-arrow-left"></i> Back
+        </button>
+        <h1>Contact Details</h1>
+        <div class="header-actions">
+          <button type="button" id="editBtn" class="btn btn-secondary">
+            <i class="fas fa-edit"></i> Edit
+          </button>
+          <button type="button" id="deleteBtn" class="btn btn-danger">
+            <i class="fas fa-trash"></i> Delete
+          </button>
+        </div>
+      </header>
+
+      <main class="main-content">
+        <div id="loadingState" class="loading-state">
+          <i class="fas fa-spinner fa-spin"></i>
+          <p>Loading contact...</p>
+        </div>
+
+        <div id="contactContent" class="form-container" style="display: none">
+          <div class="avatar-section">
+            <div class="avatar-preview">
+              <img id="avatarPreview" alt="Contact Avatar" />
+              <div
+                class="avatar-overlay"
+                id="avatarOverlay"
+                style="display: none"
+              >
+                <i class="fas fa-camera"></i>
+              </div>
+            </div>
+            <input
+              type="file"
+              id="avatarInput"
+              accept="image/*"
+              style="display: none"
+            />
+            <button
+              type="button"
+              id="changePhotoBtn"
+              class="btn btn-secondary"
+              style="display: none"
+              onclick="document.getElementById('avatarInput').click()"
+            >
+              <i class="fas fa-upload"></i> Change Photo
+            </button>
+          </div>
+
+          <form id="editForm" class="contact-form">
+            <div class="form-group">
+              <label for="firstname">
+                <i class="fas fa-user"></i> First Name
+              </label>
+              <input type="text" name="firstname" id="firstname" readonly />
+            </div>
+
+            <div class="form-group">
+              <label for="lastname">
+                <i class="fas fa-user"></i> Last Name
+              </label>
+              <input type="text" name="lastname" id="lastname" readonly />
+            </div>
+
+            <div class="form-group">
+              <label for="mobile">
+                <i class="fas fa-phone"></i> Mobile Number
+              </label>
+              <input type="tel" name="mobile" id="mobile" readonly />
+            </div>
+
+            <div class="form-group">
+              <label for="email">
+                <i class="fas fa-envelope"></i> Email Address
+              </label>
+              <input type="email" name="email" id="email" readonly />
+            </div>
+
+            <div class="form-actions" id="editActions" style="display: none">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                onclick="cancelEdit()"
+              >
+                Cancel
+              </button>
+              <button type="submit" id="submitForm" class="btn btn-primary">
+                <i class="fas fa-save"></i> Save Changes
+              </button>
+            </div>
+          </form>
+        </div>
+      </main>
+    </div>
+
+    <!-- Loading overlay -->
+    <div id="loadingOverlay" style="display: none" class="loading-overlay">
+      <div class="loading-content">
+        <i class="fas fa-spinner fa-spin"></i>
+        <p id="loadingText">Processing...</p>
+      </div>
+    </div>
+
+    <!-- Modal for messages and confirmations -->
+    <div id="modal" class="modal">
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <div id="modalBody"></div>
+      </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+      const firstname = document.getElementById("firstname");
+      const lastname = document.getElementById("lastname");
+      const mobile = document.getElementById("mobile");
+      const email = document.getElementById("email");
+      const avatarInput = document.getElementById("avatarInput");
+      const avatarPreview = document.getElementById("avatarPreview");
+      const submitForm = document.getElementById("submitForm");
+      const editBtn = document.getElementById("editBtn");
+      const deleteBtn = document.getElementById("deleteBtn");
+      const editActions = document.getElementById("editActions");
+      const changePhotoBtn = document.getElementById("changePhotoBtn");
+      const avatarOverlay = document.getElementById("avatarOverlay");
+
+      const id = getId();
+      let isEditing = false;
+      let originalData = {};
+
+      // Avatar preview functionality
+      avatarInput.addEventListener("change", function (e) {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function (e) {
+            avatarPreview.src = e.target.result;
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+
+      // Edit button functionality
+      editBtn.addEventListener("click", function () {
+        if (!isEditing) {
+          enableEdit();
+        } else {
+          cancelEdit();
+        }
+      });
+
+      // Delete button functionality
+      deleteBtn.addEventListener("click", function (e) {
+        e.preventDefault();
+        showConfirmDialog(
+          "Delete Contact",
+          "Are you sure you want to delete this contact? This action cannot be undone.",
+          "Delete",
+          function () {
+            deleteContact();
+          }
+        );
+      });
+
+      // Form submission
+      submitForm.addEventListener("click", function (e) {
+        e.preventDefault();
+
+        if (!validateForm()) {
+          return;
+        }
+
+        showLoadingOverlay("Updating contact...");
+
+        // Uncomment for actual API call
+
+        const form = new FormData(document.querySelector("#editForm"));
+        const avatarFile = avatarInput.files[0];
+        if (avatarFile) {
+          form.append("avatar", avatarFile);
+        }
+        form.append("apiKey", apiKey);
+        form.append("id", id);
+
+        fetch(rootPath + "controller/edit-contact/", {
+          method: "POST",
+          headers: { Accept: "application/json, *.*" },
+          body: form,
+        })
+          .then(function (response) {
+            return response.text();
+          })
+          .then(function (data) {
+            hideLoadingOverlay();
+            if (data == "1") {
+              showMessage("Contact updated successfully!", "success", () => {
+                home();
+              });
+            } else {
+              showMessage(data, "error");
+            }
+          })
+          .catch(function (error) {
+            hideLoadingOverlay();
+            showMessage(
+              "An error occurred while updating the contact.",
+              "error"
+            );
+          });
+      });
+
+      function getContact() {
+        
+
+        // Uncomment for actual API call
+
+        fetch(rootPath + "controller/get-contacts/?id=" + id)
+          .then((response) => response.json())
+          .then((data) => {
+            if (data && data.length > 0) {
+              populateForm(data[0]);
+              document.getElementById("loadingState").style.display = "none";
+              document.getElementById("contactContent").style.display = "block";
+            } else {
+              showMessage("Contact not found.", "error", () => {
+                home();
+              });
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            showMessage("Failed to load contact details.", "error", () => {
+              home();
+            });
+          });
+      }
+
+      function populateForm(data) {
+        originalData = { ...data };
+        firstname.value = data.firstname || "";
+        lastname.value = data.lastname || "";
+        mobile.value = data.mobile || "";
+        email.value = data.email || "";
+
+        const avatarUrl = getAvatarUrl(data.avatar);
+        avatarPreview.src = avatarUrl;
+        avatarPreview.onerror = function () {
+          this.src = `https://via.placeholder.com/120x120/4f46e5/white?text=${data.firstname.charAt(
+            0
+          )}${data.lastname.charAt(0)}`;
+        };
+      }
+
+      function enableEdit() {
+        isEditing = true;
+        firstname.readOnly = false;
+        lastname.readOnly = false;
+        mobile.readOnly = false;
+        email.readOnly = false;
+
+        editBtn.innerHTML = '<i class="fas fa-times"></i> Cancel';
+        editBtn.className = "btn btn-secondary";
+        editActions.style.display = "flex";
+        changePhotoBtn.style.display = "block";
+        avatarOverlay.style.display = "flex";
+
+        // Add editing styles
+        document.querySelectorAll(".contact-form input").forEach((input) => {
+          input.classList.add("editing");
+        });
+      }
+
+      function cancelEdit() {
+        isEditing = false;
+        firstname.readOnly = true;
+        lastname.readOnly = true;
+        mobile.readOnly = true;
+        email.readOnly = true;
+
+        // Restore original values
+        populateForm(originalData);
+
+        editBtn.innerHTML = '<i class="fas fa-edit"></i> Edit';
+        editBtn.className = "btn btn-secondary";
+        editActions.style.display = "none";
+        changePhotoBtn.style.display = "none";
+        avatarOverlay.style.display = "none";
+
+        // Remove editing styles
+        document.querySelectorAll(".contact-form input").forEach((input) => {
+          input.classList.remove("editing");
+        });
+      }
+
+      function deleteContact() {
+        showLoadingOverlay("Deleting contact...");
+
+
+        // Uncomment for actual API call
+       
+            fetch(rootPath + "controller/delete-contact/?id=" + id)
+                .then((response) => response.json())
+                .then(function (data) {
+                    hideLoadingOverlay();
+                    if (data == "1") {
+                        showMessage("Contact deleted successfully!", 'success', () => {
+                            home();
+                        });
+                    } else {
+                        showMessage(data, 'error');
+                    }
+                })
+                .catch(function(error) {
+                    hideLoadingOverlay();
+                    showMessage("An error occurred while deleting the contact.", 'error');
+                });
+      }
+
+      function validateForm() {
+        const firstnameVal = firstname.value.trim();
+        const lastnameVal = lastname.value.trim();
+
+        if (!firstnameVal || !lastnameVal) {
+          showMessage("Please fill in both first name and last name.", "error");
+          return false;
+        }
+
+        const emailVal = email.value.trim();
+        if (emailVal && !isValidEmail(emailVal)) {
+          showMessage("Please enter a valid email address.", "error");
+          return false;
+        }
+
+        return true;
+      }
+
+      function isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+      }
+
+      function getId() {
+        const url = window.location.href;
+        const pos = url.search("=");
+        return url.slice(pos + 1);
+      }
+
+      function getAvatarUrl(avatar) {
+        if (typeof rootPath !== "undefined") {
+          return `${rootPath}controller/uploads/${avatar}`;
+        }
+        return `https://via.placeholder.com/120x120/4f46e5/white?text=?`;
+      }
+
+      function home() {
+        window.location.href = "index.html";
+      }
+
+      // Modal and utility functions
+      const modal = document.getElementById("modal");
+      const closeModal = document.getElementsByClassName("close")[0];
+
+      closeModal.onclick = function () {
+        modal.style.display = "none";
+      };
+
+      window.onclick = function (event) {
+        if (event.target == modal) {
+          modal.style.display = "none";
+        }
+      };
+
+      function showLoadingOverlay(text) {
+        document.getElementById("loadingText").textContent = text;
+        document.getElementById("loadingOverlay").style.display = "flex";
+      }
+
+      function hideLoadingOverlay() {
+        document.getElementById("loadingOverlay").style.display = "none";
+      }
+
+      function showMessage(message, type, callback) {
+        const modalBody = document.getElementById("modalBody");
+        const icon =
+          type === "success"
+            ? "fas fa-check-circle"
+            : "fas fa-exclamation-triangle";
+        const color = type === "success" ? "#10b981" : "#ef4444";
+
+        modalBody.innerHTML = `
+                <div class="message-content" style="text-align: center;">
+                    <i class="${icon}" style="font-size: 3rem; color: ${color}; margin-bottom: 1rem;"></i>
+                    <h3>${type === "success" ? "Success" : "Error"}</h3>
+                    <p>${message}</p>
+                    <button class="btn btn-primary" onclick="modal.style.display='none'; ${
+                      callback ? callback.toString() + "()" : ""
+                    }">
+                        OK
+                    </button>
+                </div>
+            `;
+        modal.style.display = "block";
+      }
+
+      function showConfirmDialog(title, message, confirmText, callback) {
+        const modalBody = document.getElementById("modalBody");
+
+        modalBody.innerHTML = `
+                <div class="confirm-dialog" style="text-align: center;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #f59e0b; margin-bottom: 1rem;"></i>
+                    <h3>${title}</h3>
+                    <p>${message}</p>
+                    <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1.5rem;">
+                        <button class="btn btn-secondary" onclick="modal.style.display='none'">
+                            Cancel
+                        </button>
+                        <button class="btn btn-danger" onclick="modal.style.display='none'; (${callback.toString()})()">
+                            ${confirmText}
+                        </button>
+                    </div>
+                </div>
+            `;
+        modal.style.display = "block";
+      }
+    </script>
+  </body>
+</html>

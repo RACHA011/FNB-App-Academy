@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Key - Contact Book</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="auth-icon">
+                    <i class="fas fa-key"></i>
+                </div>
+                <h1>Contact Book</h1>
+                <p>Please enter your API key to continue</p>
+            </div>
+
+            <form id="apiKeyForm" class="auth-form">
+                <div class="form-group">
+                    <label for="apiKey">
+                        <i class="fas fa-key"></i> API Key
+                    </label>
+                    <input 
+                        type="email" 
+                        id="apiKey" 
+                        name="apiKey" 
+                        placeholder="Enter your API key"
+                        required
+                        autocomplete="username"
+                    />
+                    <div class="input-help">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Your API key should be in email format</span>
+                    </div>
+                </div>
+
+                <button type="submit" id="submitApiKey" class="btn btn-primary btn-full">
+                    <span class="btn-text">
+                        <i class="fas fa-sign-in-alt"></i> Continue
+                    </span>
+                    <span class="btn-loading" style="display: none;">
+                        <i class="fas fa-spinner fa-spin"></i> Verifying...
+                    </span>
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                <p>
+                    <i class="fas fa-shield-alt"></i>
+                    Your API key is stored securely in your browser
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Modal -->
+    <div id="errorModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div id="errorModalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        const rootPath = "https://mysite.itvarsity.org/api/ContactBook/";
+        
+        // Form elements
+        const form = document.getElementById("apiKeyForm");
+        const apiKeyInput = document.getElementById("apiKey");
+        const submitBtn = document.getElementById("submitApiKey");
+        const btnText = submitBtn.querySelector(".btn-text");
+        const btnLoading = submitBtn.querySelector(".btn-loading");
+        
+        // Modal elements
+        const errorModal = document.getElementById("errorModal");
+        const closeModal = document.getElementsByClassName("close")[0];
+        const errorModalBody = document.getElementById("errorModalBody");
+
+        // Event listeners
+        form.addEventListener('submit', handleSubmit);
+        
+        closeModal.onclick = function() {
+            errorModal.style.display = "none";
+        }
+
+        window.onclick = function(event) {
+            if (event.target == errorModal) {
+                errorModal.style.display = "none";
+            }
+        }
+
+        // Auto-focus on API key input
+        apiKeyInput.focus();
+
+        // Handle form submission
+        function handleSubmit(e) {
+            e.preventDefault();
+            
+            const apiKey = apiKeyInput.value.trim();
+            
+            if (!apiKey) {
+                showError("Please enter your API key");
+                return;
+            }
+
+            if (!isValidEmail(apiKey)) {
+                showError("Please enter a valid API key in email format");
+                return;
+            }
+
+            setApiKey(apiKey);
+        }
+
+        function setApiKey(apiKey) {
+            // Show loading state
+            setLoadingState(true);
+            
+            fetch(rootPath + "controller/api-key/?apiKey=" + apiKey)
+                .then(function (response) {
+                    return response.text();
+                })
+                .then(function (data) {
+                    setLoadingState(false);
+                    
+                    if (data == "1") {
+                        // Success - store API key and redirect
+                        localStorage.setItem("apiKey", apiKey);
+                        showSuccess("API key verified successfully!", () => {
+                            window.location.href = "index.html";
+                        });
+                    } else {
+                        // Error - show error message
+                        showError("Invalid API key. Please check your key and try again.");
+                    }
+                })
+                .catch(function(error) {
+                    setLoadingState(false);
+                    console.error('Error:', error);
+                    showError("Unable to verify API key. Please check your connection and try again.");
+                });
+        }
+
+        function setLoadingState(loading) {
+            if (loading) {
+                submitBtn.disabled = true;
+                btnText.style.display = "none";
+                btnLoading.style.display = "inline-flex";
+                apiKeyInput.disabled = true;
+            } else {
+                submitBtn.disabled = false;
+                btnText.style.display = "inline-flex";
+                btnLoading.style.display = "none";
+                apiKeyInput.disabled = false;
+            }
+        }
+
+        function showError(message) {
+            errorModalBody.innerHTML = `
+                <div class="error-message">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #ef4444; margin-bottom: 1rem;"></i>
+                    <h3>Authentication Error</h3>
+                    <p>${message}</p>
+                    <button class="btn btn-primary" onclick="errorModal.style.display='none'; apiKeyInput.focus();">
+                        Try Again
+                    </button>
+                </div>
+            `;
+            errorModal.style.display = "block";
+        }
+
+        function showSuccess(message, callback) {
+            errorModalBody.innerHTML = `
+                <div class="success-message">
+                    <i class="fas fa-check-circle" style="font-size: 3rem; color: #10b981; margin-bottom: 1rem;"></i>
+                    <h3>Success</h3>
+                    <p>${message}</p>
+                    <button class="btn btn-primary" onclick="errorModal.style.display='none'; ${callback ? callback.toString() + '()' : ''}">
+                        Continue
+                    </button>
+                </div>
+            `;
+            errorModal.style.display = "block";
+        }
+
+        function isValidEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+
+        // Handle Enter key in input
+        apiKeyInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                handleSubmit(e);
+            }
+        });
+
+        // Check if user is already authenticated
+        if (localStorage.getItem("apiKey")) {
+            window.location.href = "index.html";
+        }
+    </script>
+
+    <style>
+        /* Additional styles for auth page */
+        .auth-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .auth-card {
+            background: white;
+            border-radius: 1rem;
+            padding: 2rem;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .auth-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            color: white;
+            font-size: 1.5rem;
+        }
+
+        .auth-header h1 {
+            color: #111827;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .auth-header p {
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+
+        .auth-form {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .input-help {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+
+        .input-help i {
+            color: #9ca3af;
+        }
+
+        .btn-full {
+            width: 100%;
+            justify-content: center;
+            padding: 0.875rem 1rem;
+            font-size: 1rem;
+        }
+
+        .btn-loading {
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .auth-footer {
+            margin-top: 2rem;
+            text-align: center;
+        }
+
+        .auth-footer p {
+            font-size: 0.75rem;
+            color: #6b7280;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .auth-footer i {
+            color: #10b981;
+        }
+
+        /* Error/Success message styles */
+        .error-message,
+        .success-message {
+            text-align: center;
+        }
+
+        .error-message h3,
+        .success-message h3 {
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+        }
+
+        .error-message p,
+        .success-message p {
+            margin-bottom: 1.5rem;
+            color: #6b7280;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 480px) {
+            .auth-card {
+                padding: 1.5rem;
+                margin: 0.5rem;
+            }
+
+            .auth-icon {
+                width: 50px;
+                height: 50px;
+                font-size: 1.25rem;
+            }
+
+            .auth-header h1 {
+                font-size: 1.25rem;
+            }
+        }
+    </style>
+</body>
+</html>

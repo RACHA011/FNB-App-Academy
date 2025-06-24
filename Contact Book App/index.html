@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Contact Book App</title>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body onload="fetchContacts()">
+    <div class="container">
+      <header class="header">
+        <h1><i class="fas fa-address-book"></i> Contact Book</h1>
+        <div class="header-actions">
+          <button type="button" id="refresh" class="btn btn-secondary">
+            <i class="fas fa-sync-alt"></i> Refresh
+          </button>
+          <button type="button" id="addContact" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add Contact
+          </button>
+        </div>
+      </header>
+
+      <main class="main-content">
+        <div class="search-bar">
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="Search contacts..."
+            class="search-input"
+          />
+          <i class="fas fa-search search-icon"></i>
+        </div>
+
+        <div id="loadingState" class="loading-state">
+          <i class="fas fa-spinner fa-spin"></i>
+          <p>Loading contacts...</p>
+        </div>
+
+        <div id="contactsContainer" class="contacts-container">
+          <!-- Contacts will be loaded here -->
+        </div>
+
+        <div id="emptyState" class="empty-state" style="display: none">
+          <i class="fas fa-address-book"></i>
+          <h3>No contacts found</h3>
+          <p>Start by adding your first contact</p>
+          <button
+            class="btn btn-primary"
+            onclick="window.location.href='add-contact.html'"
+          >
+            <i class="fas fa-plus"></i> Add Contact
+          </button>
+        </div>
+      </main>
+    </div>
+
+    <!-- Modal for confirmations -->
+    <div id="modal" class="modal">
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <div id="modalBody"></div>
+      </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+      let allContacts = [];
+
+      // Event listeners
+      document.getElementById("addContact").addEventListener("click", () => {
+        window.location.href = "add-contact.html";
+      });
+
+      document
+        .getElementById("refresh")
+        .addEventListener("click", fetchContacts);
+
+      document
+        .getElementById("searchInput")
+        .addEventListener("input", function (e) {
+          filterContacts(e.target.value);
+        });
+
+      // Modal functionality
+      const modal = document.getElementById("modal");
+      const closeModal = document.getElementsByClassName("close")[0];
+
+      closeModal.onclick = function () {
+        modal.style.display = "none";
+      };
+
+      window.onclick = function (event) {
+        if (event.target == modal) {
+          modal.style.display = "none";
+        }
+      };
+
+      function fetchContacts() {
+        showLoading(true);
+
+        // Simulate API call - replace with actual API endpoint
+        setTimeout(() => {
+          // Mock data for demonstration
+          // const mockData = [
+          //   {
+          //     id: 1,
+          //     firstname: "John",
+          //     lastname: "Doe",
+          //     mobile: "+1234567890",
+          //     email: "john.doe@example.com",
+          //     avatar: "default-avatar.png",
+          //   },
+          //   {
+          //     id: 2,
+          //     firstname: "Jane",
+          //     lastname: "Smith",
+          //     mobile: "+0987654321",
+          //     email: "jane.smith@example.com",
+          //     avatar: "default-avatar.png",
+          //   },
+          // ];
+
+          // allContacts = mockData;
+          // displayContacts(mockData);
+          showLoading(false);
+        }, 1000);
+
+        fetch(rootPath + "controller/get-contacts/")
+          .then(function (response) {
+            return response.json();
+          })
+          .then(function (data) {
+            allContacts = data;
+            displayContacts(data);
+            showLoading(false);
+          })
+          .catch(function (error) {
+            console.error("Error:", error);
+            showError("Failed to load contacts");
+            showLoading(false);
+          });
+      }
+
+      function displayContacts(contacts) {
+        const container = document.getElementById("contactsContainer");
+        const emptyState = document.getElementById("emptyState");
+
+        if (!contacts || contacts.length === 0) {
+          container.innerHTML = "";
+          emptyState.style.display = "block";
+          return;
+        }
+
+        emptyState.style.display = "none";
+
+        let output = "";
+        contacts.forEach((contact) => {
+          output += `
+                    <div class="contact-card" onclick="toEdit(${contact.id})">
+                        <div class="contact-avatar">
+                            <img src="${getAvatarUrl(contact.avatar)}" alt="${
+            contact.firstname
+          } ${
+            contact.lastname
+          }" onerror="this.src='https://via.placeholder.com/60x60/4f46e5/white?text=${contact.firstname.charAt(
+            0
+          )}${contact.lastname.charAt(0)}'">
+                        </div>
+                        <div class="contact-info">
+                            <h3>${contact.firstname} ${contact.lastname}</h3>
+                            <p class="contact-mobile"><i class="fas fa-phone"></i> ${
+                              contact.mobile || "No phone"
+                            }</p>
+                            <p class="contact-email"><i class="fas fa-envelope"></i> ${
+                              contact.email || "No email"
+                            }</p>
+                        </div>
+                        <div class="contact-actions">
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </div>
+                `;
+        });
+
+        container.innerHTML = output;
+      }
+
+      function filterContacts(searchTerm) {
+        if (!searchTerm) {
+          displayContacts(allContacts);
+          return;
+        }
+
+        const filtered = allContacts.filter(
+          (contact) =>
+            contact.firstname
+              .toLowerCase()
+              .includes(searchTerm.toLowerCase()) ||
+            contact.lastname.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            contact.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            contact.mobile.includes(searchTerm)
+        );
+
+        displayContacts(filtered);
+      }
+
+      function getAvatarUrl(avatar) {
+        if (typeof rootPath !== "undefined") {
+          return `${rootPath}controller/uploads/${avatar}`;
+        }
+        return `https://via.placeholder.com/60x60/4f46e5/white?text=?`;
+      }
+
+      function toEdit(id) {
+        window.location.href = "edit-contact.html?id=" + id;
+      }
+
+      function showLoading(show) {
+        const loadingState = document.getElementById("loadingState");
+        const contactsContainer = document.getElementById("contactsContainer");
+
+        if (show) {
+          loadingState.style.display = "flex";
+          contactsContainer.style.display = "none";
+        } else {
+          loadingState.style.display = "none";
+          contactsContainer.style.display = "block";
+        }
+      }
+
+      function showError(message) {
+        const modalBody = document.getElementById("modalBody");
+        modalBody.innerHTML = `
+                <div class="error-message">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>Error</h3>
+                    <p>${message}</p>
+                    <button class="btn btn-primary" onclick="modal.style.display='none'">OK</button>
+                </div>
+            `;
+        modal.style.display = "block";
+      }
+    </script>
+  </body>
+</html>
