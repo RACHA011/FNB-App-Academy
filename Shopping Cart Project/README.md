@@ -1,0 +1,1 @@
+## This is just a basic python app to showcase my one week of learning python in fnb app academy
